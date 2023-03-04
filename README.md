@@ -6,6 +6,10 @@ This project is using Flask API to get the answer from ChatGPT, in order to prev
 
 It can be run directly by pulling the image, or it can be installed by docker-compose
 
+This project uses AGPL open source, commercial use is strictly prohibited, and it is strictly prohibited to be used for charging projects
+
+It is allowed to modify and then publish, but after modification, it must use the AGPL agreement to open source, and it is not allowed to modify the open source agreement, let alone closed source release
+
 ## Install using docker-compose
 
 Create a new directory to place the docker-compose file
