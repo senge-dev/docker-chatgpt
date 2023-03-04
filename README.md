@@ -21,7 +21,7 @@ version: '3'
 
 services:
   web:
-    image: sengedev/docker-chatgpt:0.1.0
+    image: sengedev/docker-chatgpt:latest
     ports:
       - "5000:5000"
     restart: always
@@ -38,13 +38,13 @@ docker-compose up -d
 Pull the image from Docker Hub
 
 ```bash
-docker pull sengedev/docker-chatgpt:0.1.0
+docker pull sengedev/docker-chatgpt:latest
 ```
 
 Run the image
 
 ```bash
-docker run -d -p 5000:5000 sengedev/docker-chatgpt:0.1.0
+docker run -d -p 5000:5000 sengedev/docker-chatgpt:latest
 ```
 
 ## How to use
