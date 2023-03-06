@@ -1,174 +1,252 @@
-# docker chatgpt
+# Docker项目：ChatGPT API 平台
 
-[中文](README-zh.md)|[English](README.md)
+## 自行搭建
 
-This project is using Flask API to get the answer from ChatGPT, in order to prevent affecting the other programs running on the server, I specially packaged it into a Docker image.
-
-It can be run directly by pulling the image, or it can be installed by docker-compose
-
-This project uses AGPL open source, commercial use is strictly prohibited, and it is strictly prohibited to be used for charging projects
-
-It is allowed to modify and then publish, but after modification, it must use the AGPL agreement to open source, and it is not allowed to modify the open source agreement, let alone closed source release
-
-## Install using docker-compose
-
-Create a new directory to place the docker-compose file
-
-```bash
-mkdir -p /opt/docker/docker-chatgpt
-```
-
-Create docker-compose.yaml file in the new directory and write the following content
+复制下列代码，并自行修改配置
 
 ```yaml
 version: '3'
 
 services:
   web:
-    image: sengedev/docker-chatgpt:latest
+    image: sengedev/chatgpt:latest
     ports:
       - "5000:5000"
+    volumes:
+      - ./app:/app
     restart: always
+    environment:
+      API_KEY: YourOpenAIApiKey
+      HOUR_LIMIT: 50
+      MINUTE_LIMIT: 3
+      SECOND_LIMIT: 1
+      ROUTE: chat
 ```
 
-Change to the docker directory and run the following command to start the docker container
+字段含义
 
-```bash
-docker-compose up -d
-```
+| 字段         | 含义                                                         |
+| ------------ | ------------------------------------------------------------ |
+| volumes      | 持久化配置，文件映射                                         |
+| API_KEY      | API密钥，配置后无需请求头即可完成调用，不建议设置，除非你开启了IP地址白名单 |
+| HOUR_LIMIT   | 每小时调用次数限制，如果设置为0则无限制                      |
+| MINUTE_LIMIT | 每分钟调用次数限制，如果设置为0则无限制                      |
+| SECOND_LIMIT | 每秒调用次数限制，如果设置为0则无限制                        |
+| ROUTE        | 例如你的网站是https://api.example.com，路由为route，则请求链接为https://api.example.com/route |
 
-## Install this image manually
+## 实例介绍
 
-Pull the image from Docker Hub
+### 使用教程
 
-```bash
-docker pull sengedev/docker-chatgpt:latest
-```
+下方是一个示例API地址，请替换为您自己的IP/域名。
 
-Run the image
+API链接: https://api.example.com/
 
-```bash
-docker run -d -p 5000:5000 sengedev/docker-chatgpt:latest
-```
+获取ChatGPT回答
 
-## How to use
+请求方式：`GET`，路由：`/chatgpt`
 
-### HTTP Request
+#### 请求头
 
-if your server ip is 12.34.56.78, the port is 5000, you can use this method to get the answer.
+| 请求头 | 描述                                          | 是否必需 |
+| ------ | --------------------------------------------- | -------- |
+| ApiKey | ChatGPT的API密钥                              | 是`*1`   |
+| Model  | ChatGPT API模型，默认使用text-davinci-003模型 | 否       |
 
-Method: `POST`, Directory: `/`
+#### 请求数据
 
-Required parameters
+| 数据   | 描述                | 是否必需 |
+| ------ | ------------------- | -------- |
+| prompt | 向ChatGPT发送的文本 | 是       |
 
-| Parameters | Description | Must Include |
-| ------------------- | ------------------ | ------------ |
-| api              | API Key | Yes |
-| prompt | send message to ChatGPT | Yes |
-| model | OpenAI model, default is text-davinci-003 | No |
+#### 返回值
 
-### Sample Code
+- 成功
 
-- Python
-
-```python
-import requests
-
-url = 'http://12.34.56.78:5000/'
-data = {'api': 'your_api_key', 'prompt': 'your_message', 'model': 'text-davinci-003'}
-
-response = requests.post(url, data=data)
-
-print(response.text)
-```
-
-- Java
-```java
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLEncoder;
-
-public class HttpPostExample {
-    public static void main(String[] args) throws Exception {
-        String url = "http://12.34.56.78:5000/";
-        String charset = "UTF-8";
-        String api = "your_api_key";
-        String prompt = "your_message";
-        String model = "text-davinci-003";
-        
-        String query = String.format("api=%s&prompt=%s&model=%s",
-                URLEncoder.encode(api, charset),
-                URLEncoder.encode(prompt, charset),
-                URLEncoder.encode(model, charset));
-        
-        HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
-        connection.setRequestMethod("POST");
-        connection.setDoOutput(true);
-        connection.setRequestProperty("Accept-Charset", charset);
-        connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded;charset=" + charset);
-        connection.getOutputStream().write(query.getBytes(charset));
-        
-        BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-        String line = reader.readLine();
-        while (line != null) {
-            System.out.println(line);
-            line = reader.readLine();
-        }
-        reader.close();
+```json
+{
+    "code": 200,
+    "msg": "success",
+    "data": {
+        "response": "ChatGPT回答的内容"
     }
 }
 ```
 
-- curl
+- 失败
 
-```bash
-curl --location --request POST 'http://12.34.56.78:5000/' \
---header 'Content-Type: application/x-www-form-urlencoded' \
---data-urlencode 'api=your_api_key' \
---data-urlencode 'prompt=your_message' \
---data-urlencode 'model=text-davinci-003'
+```json
+{
+    "code": 4xx,
+    "msg": "failed",
+    "data": {
+        "response": "请求失败的原因"
+    }
+}
 ```
 
-- PHP
-```php
-<?php
-$url = 'http://12.34.56.78:5000/';
-$data = array('api' => 'your_api_key', 'prompt' => 'your_message', 'model' => 'text-davinci-003');
+- 常见返回值
 
-$options = array(
-    'http' => array(
-        'header'  => "Content-type: application/x-www-form-urlencoded\r\n",
-        'method'  => 'POST',
-        'content' => http_build_query($data),
-    ),
-);
+| code | 描述                                                         |
+| ---- | ------------------------------------------------------------ |
+| 200  | 成功                                                         |
+| 400  | 请求参数错误(API未填写或填写错误、模型使用错误、缺少prompt或prompt为空) |
+| 401  | 未授权                                                       |
+| 403  | 禁止访问                                                     |
+| 404  | 请求路径不存在                                               |
+| 500  | 服务器内部错误                                               |
+| 429  | 请求过于频繁                                                 |
 
-$context  = stream_context_create($options);
-$result = file_get_contents($url, false, $context);
+#### 默认调用次数限制（每个IP）
 
-echo $result;
-?>
+API完全开放使用，无需申请，但是需要自行申请API Key
+
+| 时间段 | 频率   |
+| ------ | ------ |
+| 天     | 无限制 |
+| 小时   | 50次   |
+| 分钟   | 3次    |
+| 秒     | 1次    |
+
+## 示例代码
+
+将https://api.example.com替换为你的服务器IP/域名地址
+
+### Python
+
+```python
+import requests
+
+url = "https://api.example.com/chatgpt"
+
+headers = {
+    "ApiKey": "YourApiKey",
+    "Model": "text-davinci-003"
+}
+
+params = {
+    "prompt": "Hello"
+}
+
+response = requests.get(url, headers=headers, params=params)
+
+print(response.json()["data"]["response"])
 ```
 
-- JavaScript
+### Java
+
+```java
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+import java.io.IOException;
+
+public class ChatGPTClient {
+    public static void main(String[] args) throws IOException {
+        OkHttpClient client = new OkHttpClient();
+
+        String apiKey = "YourApiKey";
+        String model = "text-davinci-003";
+        String prompt = "Hello";
+        String url = "https://api.example.com/chatgpt?prompt=" + prompt;
+
+        Request request = new Request.Builder()
+                .url(url)
+                .addHeader("ApiKey", apiKey)
+                .addHeader("Model", model)
+                .get()
+                .build();
+
+        Response response = client.newCall(request).execute();
+        System.out.println(response.body().string());
+    }
+}
+```
+
+### JavaScript
 
 ```javascript
-const url = 'http://12.34.56.78:5000/';
-const api = 'your_api_key';
-const prompt = 'your_message';
-const model = 'text-davinci-003';
+const axios = require('axios');
 
-const data = new URLSearchParams();
-data.append('api', api);
-data.append('prompt', prompt);
-data.append('model', model);
+const url = "https://api.example.com/chatgpt";
+const apiKey = "YourApiKey";
+const model = "text-davinci-003";
+const prompt = "Hello";
 
-fetch(url, {
-  method: 'POST',
-  body: data
+axios.get(url, {
+    headers: {
+        ApiKey: apiKey,
+        Model: model
+    },
+    params: {
+        prompt: prompt
+    }
 })
-.then(response => response.text())
-.then(data => console.log(data));
+.then(response => {
+    console.log(response.data.data.response);
+})
+.catch(error => {
+    console.log(error.response.data.data.response);
+});
+```
+
+### curl
+
+```bash
+curl -H "ApiKey: YourApiKey" -H "Model: text-davinci-003" -X GET "https://api.example.com/chatgpt?prompt=Hello"
+```
+
+### GoLang
+
+```go
+package main
+
+import (
+	"fmt"
+	"net/http"
+	"io/ioutil"
+)
+
+func main() {
+
+	url := "https://api.example.com/chatgpt?prompt=Hello"
+
+	req, _ := http.NewRequest("GET", url, nil)
+
+	req.Header.Add("ApiKey", "YourApiKey")
+	req.Header.Add("Model", "text-davinci-003")
+
+	res, _ := http.DefaultClient.Do(req)
+
+	defer res.Body.Close()
+	body, _ := ioutil.ReadAll(res.Body)
+
+	fmt.Println(string(body))
+}
+```
+
+### PHP
+
+```php
+<?php
+
+$url = "https://api.example.com/chatgpt";
+$apiKey = "YourApiKey";
+$model = "text-davinci-003";
+$prompt = "Hello";
+
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, $url . "?prompt=" . $prompt);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+    "ApiKey: " . $apiKey,
+    "Model: " . $model
+));
+$response = curl_exec($ch);
+curl_close($ch);
+
+$response = json_decode($response, true);
+echo $response["data"]["response"];
+
+?>
 ```
