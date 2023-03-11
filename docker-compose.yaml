@@ -1,5 +1,7 @@
 version: '3'
 
+# GPL协议开源，禁止商用，禁止修改后闭源，禁止盈利！！！
+
 services:
   web:
     image: sengedev/chatgpt:latest   # 镜像地址
@@ -7,9 +9,10 @@ services:
       - "5000:5000" # 端口号，如果端口冲突，请修改
     restart: always # 重启策略
     environment:
-      API_KEY: YourOpenAIApiKey # 请替换为你的OpenAI API Key
-      HOUR_LIMIT: 50  # 限制每小时调用次数，如果不想限制，可以设置为0
-      MINUTE_LIMIT: 3 # 限制每分钟调用次数，如果不想限制，可以设置为0
-      SECOND_LIMIT: 1 # 限制每秒调用次数，如果不想限制，可以设置为0
-      ROUTE: chat  # 路由，如果不想设置，可以设置为null
-      PASSPHRASE: YourPassphrase   # 访问密码，和API Key搭配使用，防止他人滥用你的API Key。
+      API_KEY: YourOpenAIApiKey # 请替换为你的OpenAI API Key，前往https://platform.openai.com/account/api-keys获取
+      HOUR_LIMIT: 50  # 限制每小时调用次数，如果不想限制，则不设置该变量
+      MINUTE_LIMIT: 3 # 限制每分钟调用次数，如果不想限制，则不设置该变量
+      SECOND_LIMIT: 1 # 限制每秒调用次数，如果不想限制，则不设置该变量
+      ROUTE: api  # 路由，如果不想设置，则不设置该环境变量
+    volumes:
+      - ./logs:/app/logs # 日志保存路径
