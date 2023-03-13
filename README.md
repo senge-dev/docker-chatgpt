@@ -114,141 +114,63 @@ API完全开放使用，无需申请，但是需要自行申请API Key
 
 将https://api.example.com替换为你的服务器IP/域名地址
 
-### Python
+### Python（连续对话）
 
 ```python
 import requests
-
-url = "https://api.example.com/chatgpt"
-
-headers = {
-    "ApiKey": "YourApiKey",
-    "Model": "text-davinci-003"
-}
-
-params = {
-    "prompt": "Hello"
-}
-
-response = requests.get(url, headers=headers, params=params)
-
-print(response.json()["data"]["response"])
-```
-
-### Java
-
-```java
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
-import java.io.IOException;
-
-public class ChatGPTClient {
-    public static void main(String[] args) throws IOException {
-        OkHttpClient client = new OkHttpClient();
-
-        String apiKey = "YourApiKey";
-        String model = "text-davinci-003";
-        String prompt = "Hello";
-        String url = "https://api.example.com/chatgpt?prompt=" + prompt;
-
-        Request request = new Request.Builder()
-                .url(url)
-                .addHeader("ApiKey", apiKey)
-                .addHeader("Model", model)
-                .get()
-                .build();
-
-        Response response = client.newCall(request).execute();
-        System.out.println(response.body().string());
+import json
+ 
+url = "https://chatgpt.example.com/api"
+sys_prompt = input("sys> ")
+ 
+continuous_dialogue = []
+while True:
+    user_input = input("user> ")
+    if user_input.lower() in ['exit', 'quit']:
+        break
+    data = {
+        "system_content": sys_prompt,
+        "user_content": user_input,
+        "model": "gpt-3.5-turbo",
+        "api_key": "sk-U3y83c7o8nOn8i4ONnoT5uA9B6Yd75xrl9BIKihk4vCmCMzi",	# 该API为 fake API Key，请换成自己的API Key
+        "continuous": [],
+        "max_tokens": 100
     }
+    response = requests.post(url, json=data)
+    if response.status_code != 200:
+        print(f"请求失败，状态码：{response.status_code}")
+        print(response.text)
+    else:
+        result = json.loads(response.text)
+    print(f"ChatGPT回答：{result['current_response']}")
+    # 连续对话迭代
+    continuous_dialogue.append({"role": "user", "content": user_input})
+    continuous_dialogue.append({"role": "assistant", "content": result['current_response']})
+```
+
+### Python（非连续对话）
+
+```python
+import requests
+import json
+ 
+url = "https://chatgpt.example.com/api"
+sys_prompt = input("sys> ")
+ 
+ 
+user_input = input("user> ")
+data = {
+    "system_content": sys_prompt,
+    "user_content": user_input,
+    "model": "gpt-3.5-turbo",
+    "api_key": "sk-U3y83c7o8nOn8i4ONnoT5uA9B6Yd75xrl9BIKihk4vCmCMzi",	# 该API为 fake API Key，请换成自己的API Key
+    "max_tokens": 100
 }
-```
-
-### JavaScript
-
-```javascript
-const axios = require('axios');
-
-const url = "https://api.example.com/chatgpt";
-const apiKey = "YourApiKey";
-const model = "text-davinci-003";
-const prompt = "Hello";
-
-axios.get(url, {
-    headers: {
-        ApiKey: apiKey,
-        Model: model
-    },
-    params: {
-        prompt: prompt
-    }
-})
-.then(response => {
-    console.log(response.data.data.response);
-})
-.catch(error => {
-    console.log(error.response.data.data.response);
-});
-```
-
-### curl
-
-```bash
-curl -H "ApiKey: YourApiKey" -H "Model: text-davinci-003" -X GET "https://api.example.com/chatgpt?prompt=Hello"
-```
-
-### GoLang
-
-```go
-package main
-
-import (
-	"fmt"
-	"net/http"
-	"io/ioutil"
-)
-
-func main() {
-
-	url := "https://api.example.com/chatgpt?prompt=Hello"
-
-	req, _ := http.NewRequest("GET", url, nil)
-
-	req.Header.Add("ApiKey", "YourApiKey")
-	req.Header.Add("Model", "text-davinci-003")
-
-	res, _ := http.DefaultClient.Do(req)
-
-	defer res.Body.Close()
-	body, _ := ioutil.ReadAll(res.Body)
-
-	fmt.Println(string(body))
-}
-```
-
-### PHP
-
-```php
-<?php
-
-$url = "https://api.example.com/chatgpt";
-$apiKey = "YourApiKey";
-$model = "text-davinci-003";
-$prompt = "Hello";
-
-$ch = curl_init();
-curl_setopt($ch, CURLOPT_URL, $url . "?prompt=" . $prompt);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-    "ApiKey: " . $apiKey,
-    "Model: " . $model
-));
-$response = curl_exec($ch);
-curl_close($ch);
-
-$response = json_decode($response, true);
-echo $response["data"]["response"];
-
-?>
+response = requests.post(url, json=data)
+if response.status_code != 200:
+    print(f"请求失败，状态码：{response.status_code}")
+    print(response.text)
+else:
+    result = json.loads(response.text)
+print(f"ChatGPT回答：{result['current_response']}")
 ```

@@ -9,14 +9,13 @@ from flask_limiter.util import get_remote_address
 import os
 
 
-api_limiter = []
-hour = os.environ.get('HOUR_LIMIT')
-minute = os.environ.get('MINUTE_LIMIT')
-second = os.environ.get('SECOND_LIMIT')
-api_route = os.environ.get('ROUTE')
-sys_api = os.environ.get('API_KEY')
-save_logs = os.environ.get('SAVE_LOGS')
-if api_route == 'null' or api_route is None:
+api_limiter = []    # 调用次数限制
+hour = os.environ.get('HOUR_LIMIT')     # 限制每小时调用次数
+minute = os.environ.get('MINUTE_LIMIT')     # 限制每分钟调用次数
+second = os.environ.get('SECOND_LIMIT')     # 限制每秒调用次数
+api_route = os.environ.get('ROUTE')     # API路由
+sys_api = os.environ.get('API_KEY')     # API Key
+if api_route is None:
     api_route = ''
 if not (hour is None or hour == '0' or not hour.isdigit()):
     if int(hour) > 0:
@@ -28,13 +27,11 @@ if not (second is None or second == '0' or not second.isdigit()):
     if int(second) > 0:
         api_limiter.append(f"{second} per second")
 
-
 app = Flask(__name__)
 # 防止ASCII乱码
 app.config['JSON_AS_ASCII'] = False
 
-
-if api_limiter:     # 只有在Docker Compose中设置了限制时才会启用限制
+if api_limiter:  # 只有在Docker Compose中设置了限制时才会启用限制
     limiter = Limiter(
         get_remote_address,
         app=app,
@@ -44,8 +41,9 @@ if api_limiter:     # 只有在Docker Compose中设置了限制时才会启用�
 
 
 @app.errorhandler(429)
-def ratelimit_handler(e):
-    return jsonify({'code': 429, 'msg': f'请求过于频繁，请稍后再试，请求次数限制：每秒：{second}次、每分钟：{minute}次、每小时：{hour}次'}), 429
+def ratelimit_handler():
+    return jsonify({'code': 429,
+                    'msg': f'请求过于频繁，请稍后再试，请求次数限制：每秒：{second}次、每分钟：{minute}次、每小时：{hour}次'}), 429
 
 
 @app.route(f'/{api_route}', methods=['GET'])
@@ -78,6 +76,11 @@ def bad_request():
 def unauthorized(error):
     # 如果请求方式为GET，则拒绝访问
     return jsonify({'code': 401, 'msg': f'未授权，请检查您的API Key，错误代码：{error}'}), 401
+
+
+def success(result, answer):
+    # 返回连续对话结果和回答
+    return jsonify({'code': 200, 'msg': '请求成功', 'result': result, 'answer': answer}), 200
 
 
 @app.route(f'/{api_route}', methods=['POST'])
@@ -147,12 +150,13 @@ def chatgpt_post():
     except Exception as e:
         # 返回错误信息，使用Error Handler
         return internal_server_error(e)
-    # 返回结果
-    answer = chatgpt_response.choices[0].message['content'] # 回复内容
+    # 对正确的返回结果进行处理
+    answer = chatgpt_response.choices[0].message['content']  # 回复内容
     question = {'role': 'user', 'content': user_content}
     response = {'role': 'assistant', 'content': answer}
     result = continuous_dialogue + [question, response]
-    return jsonify({'code': 200, 'msg': '请求成功', 'result': result, 'current_response': answer}), 200
+    # 返回结果正确的结果
+    success(result, answer)
 
 
 if __name__ == '__main__':
