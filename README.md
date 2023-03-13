@@ -34,7 +34,7 @@ services:
 | HOUR_LIMIT   | 每小时调用次数限制，如果设置为0则无限制                      |
 | MINUTE_LIMIT | 每分钟调用次数限制，如果设置为0则无限制                      |
 | SECOND_LIMIT | 每秒调用次数限制，如果设置为0则无限制                        |
-| ROUTE        | 例如你的网站是https://api.example.com，路由为route，则请求链接为https://api.example.com/route |
+| ROUTE        | 例如你的网站是https://api.example.com ，路由为route，则请求链接为 https://api.example.com/route |
 
 ## 实例介绍
 
