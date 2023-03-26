@@ -1,129 +1,141 @@
-# Docker项目：ChatGPT API 平台
+# Docker Project: ChatGPT API Platform
 
-## 自行搭建
+This document is also supported for the following languages
 
-复制下列代码，并自行修改配置
+[English](README.md) | [简体中文](README-zh_CN.md) | [繁體中文](README-zh_TW.md) | [Русский](README-ru_RU.md)
+
+## Self Built
+
+Copy the following code and modify the configuration yourself
 
 ```yaml
 version: '3'
 
-# GPL协议开源，禁止商用，禁止修改后闭源，禁止盈利！！！
+# GPL protocol open source, no commercial use, no modification and closure after modification, no profit!!!
 
 services:
   web:
-    image: sengedev/chatgpt:latest   # 镜像地址
+    image: sengedev/chatgpt:latest   # Mirror address
     ports:
-      - "5000:5000" # 端口号，如果端口冲突，请修改
-    restart: always # 重启策略
+      - "5000:5000" # Port number, if the port conflicts, please modify it
+    restart: always # Restart strategy
     environment:
-      API_KEY: YourOpenAIApiKey # 请替换为你的OpenAI API Key，前往https://platform.openai.com/account/api-keys获取
-      HOUR_LIMIT: 50  # 限制每小时调用次数，如果不想限制，则不设置该变量
-      MINUTE_LIMIT: 3 # 限制每分钟调用次数，如果不想限制，则不设置该变量
-      SECOND_LIMIT: 1 # 限制每秒调用次数，如果不想限制，则不设置该变量
-      ROUTE: api  # 路由，如果不想设置，则不设置该环境变量
-    volumes:
-      - ./logs:/app/logs # 日志保存路径
+      API_KEY: YourOpenAIApiKey # Please replace it with your OpenAI API Key, go to https://platform.openai.com/account/api-keys to get it
+      HOUR_LIMIT: 50  # Limit the number of calls per hour, if you don't want to limit it, don't set this variable
+      MINUTE_LIMIT: 3 # Limit the number of calls per minute, if you don't want to limit it, don't set this variable
+      SECOND_LIMIT: 1 # Limit the number of calls per second, if you don't want to limit it, don't set this variable
+      ROUTE: api  # Route, if you don't want to set it, don't set this environment variable
+      LANG: zh_CN # Language, currently supports Simplified Chinese, Traditional Chinese, English, and Russian
 ```
 
-字段含义
+Field meaning
 
-| 字段         | 含义                                                         |
+| Field         | Meaning                                                     |
 | ------------ | ------------------------------------------------------------ |
-| volumes      | 持久化配置，文件映射                                         |
-| API_KEY      | API密钥，配置后无需请求头即可完成调用，不建议设置，除非你开启了IP地址白名单 |
-| HOUR_LIMIT   | 每小时调用次数限制，如果设置为0则无限制                      |
-| MINUTE_LIMIT | 每分钟调用次数限制，如果设置为0则无限制                      |
-| SECOND_LIMIT | 每秒调用次数限制，如果设置为0则无限制                        |
-| ROUTE        | 例如你的网站是https://api.example.com ，路由为route，则请求链接为 https://api.example.com/route |
+| API_KEY      | API key, after configuration, the call can be completed without the request header, it is not recommended to set it, unless you have enabled the IP address whitelist |
+| HOUR_LIMIT   | The number of calls per hour is limited. If it is set to 0, there is no limit |
+| MINUTE_LIMIT | The number of calls per minute is limited. If it is set to 0, there is no limit |
+| SECOND_LIMIT | The number of calls per second is limited. If it is set to 0, there is no limit |
+| ROUTE        | For example, if your website is https://api.example.com and the route is route, the request link is https://api.example.com/route |
 
-## 实例介绍
+## Instance Introduction
 
-### 使用教程
 
-下方是一个示例API地址，请替换为您自己的IP/域名。
+### Tutorial
 
-API链接: https://api.example.com/
+Here is an example API address, please replace it with your own IP/domain.
 
-获取ChatGPT回答
+API link: https://chatgpt.example.com/
 
-请求方式：`GET`，路由：`/chatgpt`
+Get ChatGPT answer
 
-#### 请求头
+Request method: `POST`, route: `/api`
 
-| 请求头 | 描述                                          | 是否必需 |
-| ------ | --------------------------------------------- | -------- |
-| ApiKey | ChatGPT的API密钥                              | 是`*1`   |
-| Model  | ChatGPT API模型，默认使用text-davinci-003模型 | 否       |
+#### Request Parameters
 
-#### 请求数据
 
-| 数据   | 描述                | 是否必需 |
-| ------ | ------------------- | -------- |
-| prompt | 向ChatGPT发送的文本 | 是       |
+| Data           | Description                                      | Required |
+|--------------|-----------------------------------------|------|
+| sys_content  | System configuration, some restrictions on ChatGPT                      | No    |
+| user_content | Content sent to ChatGPT                           | Yes    |
+| model        | Model, default to text-davinci-003 model               | No    |
+| api_key      | API key, must be configured, unless you add an API key in Docker-comppose | No    |
+| max_tokens   | The maximum number of tokens generated, default is 100, maximum is 3500             | No    |
+| continuous   | Continuous dialogue parameters, can be iterated to achieve context dialogue operations            | No    |
 
-#### 返回值
+#### Response
 
-- 成功
+
+- Success
 
 ```json
 {
     "code": 200,
     "msg": "success",
     "data": {
-        "response": "ChatGPT回答的内容"
+        "response": "Content answered by ChatGPT"
     }
 }
 ```
 
-- 失败
+- Failure
 
 ```json
 {
-    "code": 4xx,
+    "code": "4xx",
     "msg": "failed",
     "data": {
-        "response": "请求失败的原因"
+        "response": "Reason for request failure"
     }
 }
 ```
 
-- 常见返回值
+- Common response values
 
-| code | 描述                                                         |
-| ---- | ------------------------------------------------------------ |
-| 200  | 成功                                                         |
-| 400  | 请求参数错误(API未填写或填写错误、模型使用错误、缺少prompt或prompt为空) |
-| 401  | 未授权                                                       |
-| 403  | 禁止访问                                                     |
-| 404  | 请求路径不存在                                               |
-| 500  | 服务器内部错误                                               |
-| 429  | 请求过于频繁                                                 |
+| code | Description                                           |
+|------|-------------------------------------------------------|
+| 200  | Success                                               |
+| 400  | Request parameter error (API not filled in or filled in incorrectly, model usage error, prompt missing or prompt empty) |
+| 401  | Unauthorized                                           |
+| 403  | Forbidden                                              |
+| 404  | Request path does not exist                            |
+| 500  | Internal server error                                  |
+| 429  | Request too frequent                                   |
 
-#### 默认调用次数限制（每个IP）
+#### Default call limit (per IP)
 
-API完全开放使用，无需申请，但是需要自行申请API Key
+The API is completely open for use without application, but you need to apply for an API Key yourself.
 
-| 时间段 | 频率   |
-| ------ | ------ |
-| 天     | 无限制 |
-| 小时   | 50次   |
-| 分钟   | 3次    |
-| 秒     | 1次    |
+| Time period | Frequency |
+|-------------|-----------|
+| Day         | Unlimited |
+| Hour        | 50 times  |
+| Minute      | 3 times   |
+| Second      | 1 time    |
 
-## 示例代码
+## Example Code
 
-将https://api.example.com替换为你的服务器IP/域名地址
 
-### Python（连续对话）
+Replace https://api.example.com with your server IP/domain address
+
+### Python (Continuous Dialogue)
 
 ```python
 import requests
 import json
- 
-url = "https://chatgpt.example.com/api"
+
+
+token = {
+    "api_key": "Your API Key",  # Replace with your own API Key
+    "url": "https://chatgpt.example.com/api"    # Replace with your own instance
+}
+
+
+# ChatGPT API Demo
+url = token["url"]
 sys_prompt = input("sys> ")
- 
-continuous_dialogue = []
+
+continuous_dialogue = [{"role": "system", "content": sys_prompt}]
 while True:
     user_input = input("user> ")
     if user_input.lower() in ['exit', 'quit']:
@@ -132,45 +144,56 @@ while True:
         "system_content": sys_prompt,
         "user_content": user_input,
         "model": "gpt-3.5-turbo",
-        "api_key": "sk-U3y83c7o8nOn8i4ONnoT5uA9B6Yd75xrl9BIKihk4vCmCMzi",	# 该API为 fake API Key，请换成自己的API Key
+        "api_key": token["api_key"],
         "continuous": [],
-        "max_tokens": 100
+        "max_tokens": 3000
     }
     response = requests.post(url, json=data)
     if response.status_code != 200:
-        print(f"请求失败，状态码：{response.status_code}")
-        print(response.text)
+        print(f"Request failed, status code: {response.status_code}, server response: {response.text}")
+        continue
     else:
         result = json.loads(response.text)
-    print(f"ChatGPT回答：{result['current_response']}")
-    # 连续对话迭代
+    print(f"ChatGPT> {result['current_response']}")
+    # Continuous dialogue iteration
     continuous_dialogue.append({"role": "user", "content": user_input})
     continuous_dialogue.append({"role": "assistant", "content": result['current_response']})
+
+print("Program has exited")
 ```
 
-### Python（非连续对话）
+### Python (Non-Continuous Dialogue)
 
 ```python
+import sys
 import requests
 import json
- 
-url = "https://chatgpt.example.com/api"
+
+
+token = {
+    "api_key": "Your API Key",  # Replace with your own API Key
+    "url": "https://chatgpt.example.com/api"    # Replace with your own instance
+}
+
+
+# ChatGPT API Demo
+url = token["url"]
 sys_prompt = input("sys> ")
- 
- 
+
 user_input = input("user> ")
 data = {
     "system_content": sys_prompt,
     "user_content": user_input,
     "model": "gpt-3.5-turbo",
-    "api_key": "sk-U3y83c7o8nOn8i4ONnoT5uA9B6Yd75xrl9BIKihk4vCmCMzi",	# 该API为 fake API Key，请换成自己的API Key
-    "max_tokens": 100
+    "api_key": token["api_key"],
+    "continuous": [],
+    "max_tokens": 3000
 }
 response = requests.post(url, json=data)
 if response.status_code != 200:
-    print(f"请求失败，状态码：{response.status_code}")
-    print(response.text)
+    print(f"Request failed, status code: {response.status_code}, server response: {response.text}")
+    sys.exit(1)
 else:
     result = json.loads(response.text)
-print(f"ChatGPT回答：{result['current_response']}")
+print(f"ChatGPT> {result['current_response']}")
 ```

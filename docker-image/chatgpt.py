@@ -6,7 +6,6 @@ from flask import Flask, request, jsonify
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import os
-import requests     # 检测服务器的IP所在国家是否受OpenAI支持
 
 
 class ChatGPTError(Exception):
@@ -17,12 +16,53 @@ class ChatGPTError(Exception):
         return self.msg
 
 
+locales = {
+    "en_US": {
+        "request_too_often": "Your request is too frequent, the limit is %s per hour, %s per minute, %s per second",
+        "access_denied": "Access denied, you do not have access to this website.",
+        "server_error": "Server internal error!",
+        "server_error_with_err_code": "Server internal error! Error code: %s",
+        "parameter_error": "Request parameter error!",
+        "unauthorized": "Unauthorized access, please check your OpenAI API Key.",
+        "access_successful": "Access successful."
+    },
+    "zh_CN": {
+        "request_too_often": "您的请求过于频繁，限制为每小时%s次，每分钟%s次，每秒%s次",
+        "access_denied": "访问被拒绝，您没有此网站的访问权限。",
+        "server_error": "服务器内部错误！",
+        "server_error_with_err_code": "服务器内部错误！错误代码：%s",
+        "parameter_error": "请求参数错误！",
+        "unauthorized": "未授权访问，请检查您的OpenAI API Key。",
+        "access_successful": "请求成功"
+    },
+    "zh_TW": {
+        "request_too_often": "您的請求過於頻繁，限制為每小時%s次，每分鐘%s次，每秒%s次",
+        "access_denied": "訪問被拒絕，您沒有此網站的訪問權限。",
+        "server_error": "服務器內部錯誤！",
+        "server_error_with_err_code": "服務器內部錯誤！錯誤代碼：%s",
+        "parameter_error": "請求參數錯誤！",
+        "unauthorized": "未授權訪問，請檢查您的OpenAI API Key。",
+        "access_successful": "請求成功"
+    },
+    "ru_RU": {
+        "request_too_often": "Ваш запрос слишком часто, лимит %s в час, %s в минуту, %s в секунду",
+        "access_denied": "Доступ запрещен, у вас нет доступа к этому сайту.",
+        "server_error": "Внутренняя ошибка сервера!",
+        "server_error_with_err_code": "Внутренняя ошибка сервера! Код ошибки: %s",
+        "parameter_error": "Ошибка параметра запроса!",
+        "unauthorized": "Неавторизованный доступ, пожалуйста, проверьте свой ключ API OpenAI.",
+        "access_successful": "Доступ успешный."
+    }
+}
+
+
 api_limiter = []    # 调用次数限制
 hour = os.environ.get('HOUR_LIMIT')     # 限制每小时调用次数
 minute = os.environ.get('MINUTE_LIMIT')     # 限制每分钟调用次数
 second = os.environ.get('SECOND_LIMIT')     # 限制每秒调用次数
 api_route = os.environ.get('ROUTE')     # API路由
 sys_api = os.environ.get('API_KEY')     # API Key
+language = os.environ.get('LANG')   # 语言
 if api_route is None:
     api_route = ''
 if not (hour is None or hour == '0' or not hour.isdigit()):
@@ -34,6 +74,18 @@ if not (minute is None or minute == '0' or not minute.isdigit()):
 if not (second is None or second == '0' or not second.isdigit()):
     if int(second) > 0:
         api_limiter.append(f"{second} per second")
+# 语言处理
+if language is None:
+    language = 'en_US'  # 默认语言为英文
+if language.startswith('en'):
+    language = 'en_US'
+if language.startswith('zh') and language != 'zh_CN' and language != 'zh':
+    language = 'zh_TW'  # 繁体中文
+if language == 'zh_CN' or language == 'zh':
+    language = 'zh_CN'  # 简体中文
+if language.startswith('ru'):
+    language = 'ru_RU'  # 俄语
+
 
 app = Flask(__name__)
 # 防止ASCII乱码
@@ -50,29 +102,27 @@ if api_limiter:  # 只有在Docker Compose中设置了限制时才会启用限�
 
 @app.errorhandler(429)
 def ratelimit_handler():
-    msg = f'请求过于频繁，请稍后再试，请求次数限制：每秒：{second}次、每分钟：{minute}次、每小时：{hour}次'
+    # 根据不同的语言返回不同的提示
+    msg = locales[language]['request_too_often'] % (hour, minute, second)
     return jsonify({'code': 429, 'msg': msg}), 429
 
 
 @app.route(f'/{api_route}', methods=['GET'])
 def chatgpt_get():
-    # 如果请求方式为GET，则拒绝访问
-    msg = '拒绝访问'
+    msg = locales[language]['access_denied']
     return jsonify({'code': 403, 'msg': msg}), 403
 
 
-@app.errorhandler(404)
-def not_found():
-    # 如果请求方式为GET，则拒绝访问
-    msg = '请求错误，请检查您的请求方式'
-    return jsonify({'code': 404, 'msg': msg}), 404
+@app.errorhandler(403)
+def denied():
+    msg = locales[language]['access_denied']
+    return jsonify({'code': 403, 'msg': msg}), 403
 
 
 @app.errorhandler(500)
 def internal_server_error(error):
-    # 如果请求方式为GET，则拒绝访问
-    msg_with_err_code = f'服务器内部错误，请联系管理员，错误代码：{error}'
-    msg = '服务器内部错误，请联系管理员'
+    msg_with_err_code = locales[language]['server_error_with_err_code'] % error
+    msg = locales[language]['server_error']
     if error is not None:
         return jsonify({'code': 500, 'msg': msg_with_err_code}), 500
     return jsonify({'code': 500, 'msg': msg}), 500
@@ -80,22 +130,20 @@ def internal_server_error(error):
 
 @app.errorhandler(400)
 def bad_request():
-    # 如果请求方式为GET，则拒绝访问
-    msg = '请求参数错误'
+    msg = locales[language]['parameter_error']
     return jsonify({'code': 400, 'msg': msg}), 400
 
 
 @app.errorhandler(401)
 def unauthorized(error):
-    # 如果请求方式为GET，则拒绝访问
-    msg = f'未授权，请检查您的API Key，错误代码：{error}'
+    msg = locales[language]['unauthorized']
     return jsonify({'code': 401, 'msg': msg}), 401
 
 
 def success(result, answer):
     # 返回连续对话结果和回答
-    msg = '请求成功'
-    return jsonify({'code': 200, 'msg': msg, 'result': result, 'answer': answer}), 200
+    msg = locales[language]['access_successful']
+    return jsonify({'code': 200, 'msg': msg, 'result': result, 'current_response': answer}), 200
 
 
 @app.route(f'/{api_route}', methods=['POST'])
@@ -145,6 +193,7 @@ def chatgpt_post():
         continuous_dialogue = []
     # 设置API密钥
     openai.api_key = api_key
+    # print(api_key)
     # 拼接参数
     messages = [{"role": "system", "content": system_content}, {"role": "user", "content": user_content}]
     # 判断连续对话参数内是否有system，如果没有，则添加，如果有，则将system的内容替换为当前的system内容
@@ -169,208 +218,11 @@ def chatgpt_post():
     answer = chatgpt_response.choices[0].message['content']  # 回复内容
     question = {'role': 'user', 'content': user_content}
     response = {'role': 'assistant', 'content': answer}
+    print(response['content'])
     result = continuous_dialogue + [question, response]
     # 返回结果正确的结果
-    success(result, answer)
+    return success(result, answer)
 
 
 if __name__ == '__main__':
-    authorized_countries = {
-        "AL": "阿尔巴尼亚",
-        "DZ": "阿尔及利亚",
-        "AD": "安道尔",
-        "AO": "安哥拉",
-        "AG": "安提瓜和巴布达",
-        "AR": "阿根廷",
-        "AM": "亚美尼亚",
-        "AU": "澳大利亚",
-        "AT": "奥地利",
-        "AZ": "阿塞拜疆",
-        "BS": "巴哈马",
-        "BD": "孟加拉国",
-        "BB": "巴巴多斯",
-        "BE": "比利时",
-        "BZ": "伯利兹",
-        "BJ": "贝宁",
-        "BT": "不丹",
-        "BA": "波斯尼亚和黑塞哥维那",
-        "BW": "博茨瓦纳",
-        "BR": "巴西",
-        "BG": "保加利亚",
-        "BF": "布基纳法索",
-        "CV": "佛得角",
-        "CA": "加拿大",
-        "CL": "智利",
-        "CO": "哥伦比亚",
-        "KM": "科摩罗",
-        "CR": "哥斯达黎加",
-        "HR": "克罗地亚",
-        "CY": "塞浦路斯",
-        "DK": "丹麦",
-        "DJ": "吉布提",
-        "DM": "多米尼克",
-        "DO": "多米尼加共和国",
-        "EC": "厄瓜多尔",
-        "SV": "萨尔瓦多",
-        "EE": "爱沙尼亚",
-        "FJ": "斐济",
-        "FI": "芬兰",
-        "FR": "法国",
-        "GA": "加蓬",
-        "GM": "冈比亚",
-        "GE": "格鲁吉亚",
-        "DE": "德国",
-        "GH": "加纳",
-        "GR": "希腊",
-        "GD": "格林纳达",
-        "GT": "危地马拉",
-        "GN": "几内亚",
-        "GW": "几内亚比绍",
-        "GY": "圭亚那",
-        "HT": "海地",
-        "HN": "洪都拉斯",
-        "HU": "匈牙利",
-        "IS": "冰岛",
-        "IN": "印度",
-        "ID": "印度尼西亚",
-        "IQ": "伊拉克",
-        "IE": "爱尔兰",
-        "IL": "以色列",
-        "IT": "意大利",
-        "JM": "牙买加",
-        'JP': '日本',
-        'JO': '约旦',
-        'KZ': '哈萨克斯坦',
-        'KE': '肯尼亚',
-        'KI': '基里巴斯',
-        'KW': '科威特',
-        'KG': '吉尔吉斯斯坦',
-        'LV': '拉脱维亚',
-        'LB': '黎巴嫩',
-        'LS': '莱索托',
-        'LR': '利比里亚',
-        'LI': '列支敦士登',
-        'LT': '立陶宛',
-        'LU': '卢森堡',
-        'MG': '马达加斯加',
-        'MW': '马拉维',
-        'MY': '马来西亚',
-        'MV': '马尔代夫',
-        'ML': '马里',
-        'MT': '马耳他',
-        'MH': '马绍尔群岛',
-        'MR': '毛里塔尼亚',
-        'MU': '毛里求斯',
-        'MX': '墨西哥',
-        'MC': '摩纳哥',
-        'MN': '蒙古',
-        'ME': '黑山',
-        'MA': '摩洛哥',
-        'MZ': '莫桑比克',
-        'MM': '缅甸',
-        'NA': '纳米比亚',
-        'NR': '瑙鲁',
-        'NP': '尼泊尔',
-        'NL': '荷兰',
-        'NZ': '新西兰',
-        'NI': '尼加拉瓜',
-        'NE': '尼日尔',
-        'NG': '尼日利亚',
-        'MK': '北马其顿',
-        'NO': '挪威',
-        'OM': '阿曼',
-        'PK': '巴基斯坦',
-        'PW': '帕劳',
-        'PA': '巴拿马',
-        'PG': '巴布亚新几内亚',
-        'PE': '秘鲁',
-        'PH': '菲律宾',
-        'PL': '波兰',
-        'PT': '葡萄牙',
-        'QA': '卡塔尔',
-        'RO': '罗马尼亚',
-        'RW': '卢旺达',
-        'KN': '圣基茨和尼维斯',
-        'LC': '圣卢西亚',
-        'VC': '圣文森特和格林纳丁斯',
-        'WS': '萨摩亚',
-        'SM': '圣马力诺',
-        'ST': '圣多美和普林西比',
-        'SN': '塞内加尔',
-        'RS': '塞尔维亚',
-        'SC': '塞舌尔',
-        'SL': '塞拉利昂',
-        'SG': '新加坡',
-        'SK': '斯洛伐克',
-        'SI': '斯洛文尼亚',
-        'SB': '所罗门群岛',
-        'ZA': '南非',
-        'ES': '西班牙',
-        'LK': '斯里兰卡',
-        'SR': '苏里南',
-        'SE': '瑞典',
-        'CH': '瑞士',
-        'TH': '泰国',
-        'TG': '多哥',
-        'TO': '汤加',
-        'TT': '特立尼达和多巴哥',
-        'TN': '突尼斯',
-        'TR': '土耳其',
-        'TV': '图瓦卢',
-        'UG': '乌干达',
-        'AE': '阿联酋',
-        'US': '美国',
-        'UY': '乌拉圭',
-        'VU': '瓦努阿图',
-        'ZM': '赞比亚',
-        'BO': '玻利维亚',
-        'BN': '文莱',
-        'CG': '刚果（布）',
-        'CZ': '捷克共和国',
-        'VA': '梵蒂冈',
-        'FM': '密克罗尼西亚联邦',
-        'MD': '摩尔多瓦',
-        'PS': '巴勒斯坦',
-        'KR': '韩国',
-        'TW': '中国台湾',
-        'TZ': '坦桑尼亚',
-        'TL': '东帝汶',
-        'GB': '英国'
-    }
-    unauthorized_countries = {
-        'RU': '俄罗斯',
-        'CN': '中国大陆',
-        'HK': '中国香港',
-        'IR': '伊朗',
-        'AF': '阿富汗',
-        'SY': '叙利亚',
-        'ET': '埃塞俄比亚',
-        'KP': '北朝鲜',
-        'SD': '苏丹',
-        'TD': '乍得',
-        'LY': '利比亚',
-        'ZW': '津巴布韦',
-        'SO': '索马里',
-        'CM': '喀麦隆',
-        'SZ': '在斯瓦特',
-        'CF': '中非共和国',
-        'CV': '佛得角',
-        'BI': '布隆迪',
-        'ER': '厄立特里亚',
-        'UA': '乌克兰'
-    }
-    supported_countries_list = authorized_countries.keys()
-    # 判断国家代码是否在支持的国家代码列表中
-    data = requests.get('https://ipinfo.io/json').json()
-    country_code = data['country']
-    ip = data['ip']
-    # 获取国家代码
-    if country_code in supported_countries_list:
-        country = authorized_countries[country_code]
-        print(f"您的服务器所在国家为{country}，IP地址为：{ip}正在启动OpenAI API服务")
-        # 启动服务
-        app.run(host='0.0.0.0', port=5000, debug=True)
-    else:
-        country = unauthorized_countries[country_code]
-        raise ChatGPTError(msg=f"您的服务器所在国家为{country}，IP地址为：{ip}暂不支持使用OpenAI API服务")
-
+    app.run(host='0.0.0.0', port=5000, debug=True)
