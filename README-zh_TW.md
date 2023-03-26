@@ -36,7 +36,7 @@ services:
 | HOUR_LIMIT   | 每小時調用次數限制，如果設置為0則無限制                      |
 | MINUTE_LIMIT | 每分鐘調用次數限制，如果設置為0則無限制                      |
 | SECOND_LIMIT | 每秒調用次數限制，如果設置為0則無限制                        |
-| ROUTE        | 例如你的網站是https://api.example.com ，路由為route，則請求鏈接為 https://api.example.com/route |
+| ROUTE        | 例如你的網站是https://chatgpt.example.com ，路由為api，則請求鏈接為 https://chatgpt.example.com/api |
 
 ## 實例介紹
 
@@ -112,7 +112,7 @@ API完全開放使用，無需申請，但是需要自行申請API Key
 
 ## 示例代码
 
-將https://api.example.com替換為你的服務器IP/域名地址
+將https://chatgpt.example.com/api 替換為你的服務器IP/域名地址
 
 ### Python（連續對話）
 

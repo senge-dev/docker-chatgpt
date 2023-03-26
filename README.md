@@ -36,7 +36,7 @@ Field meaning
 | HOUR_LIMIT   | The number of calls per hour is limited. If it is set to 0, there is no limit |
 | MINUTE_LIMIT | The number of calls per minute is limited. If it is set to 0, there is no limit |
 | SECOND_LIMIT | The number of calls per second is limited. If it is set to 0, there is no limit |
-| ROUTE        | For example, if your website is https://api.example.com and the route is route, the request link is https://api.example.com/route |
+| ROUTE        | For example, if your website is https://chatgpt.example.com and the route is api, the request link is https://chatgpt.example.com/api |
 
 ## Instance Introduction
 
@@ -116,7 +116,7 @@ The API is completely open for use without application, but you need to apply fo
 ## Example Code
 
 
-Replace https://api.example.com with your server IP/domain address
+Replace https://chatgpt.example.com/api with your server IP/domain address
 
 ### Python (Continuous Dialogue)
 

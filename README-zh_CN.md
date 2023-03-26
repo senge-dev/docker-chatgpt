@@ -36,7 +36,7 @@ services:
 | HOUR_LIMIT   | 每小时调用次数限制，如果设置为0则无限制                      |
 | MINUTE_LIMIT | 每分钟调用次数限制，如果设置为0则无限制                      |
 | SECOND_LIMIT | 每秒调用次数限制，如果设置为0则无限制                        |
-| ROUTE        | 例如你的网站是https://api.example.com ，路由为route，则请求链接为 https://api.example.com/route |
+| ROUTE        | 例如你的网站是https://chatgpt.example.com ，路由为api，则请求链接为 https://chatgpt.example.com/api |
 
 ## 实例介绍
 
@@ -112,7 +112,7 @@ API完全开放使用，无需申请，但是需要自行申请API Key
 
 ## 示例代码
 
-将https://api.example.com替换为你的服务器IP/域名地址
+将https://chatgpt.example.com/api 替换为你的服务器IP/域名地址
 
 ### Python（连续对话）
 
